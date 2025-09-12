@@ -1,0 +1,4 @@
+endl = 0xA
+rbx = stdout
+rdx = length
+msg = адрес
