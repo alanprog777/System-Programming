@@ -16,6 +16,7 @@ gunzip "Text #3.gz"
 head -n 1 "Text $2" > "Text #3"
 echo "Будь осторожен! Преступник вооружен!" >> "Text #3"
 gzip "Text #3"
+touch Result_one
 tac "Text @1" > "Result_one"
 mv "Result_one" "Result_two"
 touch Result_3
