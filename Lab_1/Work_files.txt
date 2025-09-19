@@ -1,3 +1,4 @@
+mkdir Work
 mkdir Лабораторнаяработа№1!
 mkdir ФИО
 chmod 774 "Лабораторная работа №1!"
@@ -9,12 +10,15 @@ cat "Text @1" > "Text $2"
 mv "Text $2" "Лабораторная работа №1!"
 chmod +x "ФИО/"
 chmod 200 "ФИО/"
+cp "Text @1" "ФИО/"
 gzip "Text @1"
 gzip "Text #3"
 tar -cf "MyAchiv.tar" "Text @1.gz" "Text #3.gz"
 gunzip "Text #3.gz"
-head -n 1 "Text $2" > "Text #3"
+gunzip "Text @1.gz"
+head -n 1 "Text @1" > "Text #3"
 echo "Будь осторожен! Преступник вооружен!" >> "Text #3"
+gzip "Text @1"
 gzip "Text #3"
 touch Result_one
 tac "Text @1" > "Result_one"
