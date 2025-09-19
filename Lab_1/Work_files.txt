@@ -1,16 +1,16 @@
 mkdir Work
 mkdir Лабораторнаяработа№1!
-mkdir ФИО
+mkdir Али Алан Наурасович
 chmod 774 "Лабораторная работа №1!"
-chmod 200 "ФИО"
+chmod 200 "Али Алан Наурасович"
 touch "Text @1" "Text $2" "Text #3"
 echo "Птица говорун отличается умом и сообразительностью!" > "Text @1"
 echo "Отличается умом, отличается сообразительностью..." >> "Text @1"
 cat "Text @1" > "Text $2"
 mv "Text $2" "Лабораторная работа №1!"
-chmod +x "ФИО/"
-chmod 200 "ФИО/"
-cp "Text @1" "ФИО/"
+chmod +x "Али Алан Наурасович/"
+chmod 200 "Али Алан Наурасович/"
+cp "Text @1" "Али Алан Наурасович/"
 gzip "Text @1"
 gzip "Text #3"
 tar -cf "MyAchiv.tar" "Text @1.gz" "Text #3.gz"
@@ -24,7 +24,7 @@ touch Result_one
 tac "Text @1" > "Result_one"
 mv "Result_one" "Result_two"
 touch Result_3
-cat "Work/ФИО/Text @1" > "Work/Лабораторная работа №1!/Result_3"
+cat "Work/Али Алан Наурасович/Text @1" > "Work/Лабораторная работа №1!/Result_3"
 uname -a >> "Work/Лабораторная работа №1/Result_3"
 date >> "Work/Лабораторная работа №1/Result_3"
 mkdir Lab_1
