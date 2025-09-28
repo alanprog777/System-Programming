@@ -32,7 +32,7 @@ section '.text' executable
       call print
 
       inc rsi
-      cmp rsi, 7     ;ждя колва строк
+      cmp rsi, 11     ;ждя колва строк
       jne .iter1
     call exit
 
