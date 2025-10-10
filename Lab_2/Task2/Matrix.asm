@@ -25,6 +25,7 @@ _start:
         mov rbx, 1
         mov rdx, 1
         int 0x80
+        
         pop rdx
         dec rdx
         cmp rdx, 0

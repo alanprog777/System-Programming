@@ -17,7 +17,7 @@ section '.text' executable
       xor rdi, rdi  ;счетчик для плюсиков
 
       mov rbx, [num]
-      inc rbx
+      inc rbx ; увеличивает счетчик на 1
       mov [num], rbx
 
       .iter2:

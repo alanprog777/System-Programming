@@ -1,6 +1,5 @@
 format ELF64
 
-;include "func.asm"
 public _start
 public exit
 public print
