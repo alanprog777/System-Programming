@@ -1,0 +1,6 @@
+touch Task_1
+touch Task_2
+touch Task_3
+mkdir tmp
+cp /bin/l* tmp/ 
+ls tmp/ | wc -l > Task_1
