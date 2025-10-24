@@ -11,11 +11,11 @@ M db 11
 
 section '.text' executable
 _start:
-  mov cl, [M]
+  mov cl, [M]                 ;младший байт регистра RCX
 
   .iter1:
     push rcx
-    mov dl,[K]
+    mov dl,[K]                ;младший байт регистра RDX
 
     .iter2:
         push rdx
@@ -25,11 +25,11 @@ _start:
         mov rbx, 1
         mov rdx, 1
         int 0x80
-        
+
         pop rdx
         dec rdx
         cmp rdx, 0
-        jne .iter2
+        jne .iter2       ;если не 0 - продолжаем
 
 
     mov rax, 4
