@@ -21,10 +21,10 @@ section '.text' executable
 
     .sum_loop:
       xor rdx, rdx
-      div qword [ten]         ;рез в rax ост в rdx
+      div qword [ten]         ;част в rax ост в rdx
       add rbx, rdx          ;остаток в сумму
       cmp rax, 0
-      jne .sum_loop
+      jne .sum_loop         ;если не 0, то продолжаем
 
     mov [res], rbx
 
@@ -64,10 +64,10 @@ print:
         add rax, '0'             ;аскии
         mov [place], al         ;вывод побайтово
 
-        mov eax, 1
-        mov edi, 1
+        mov rax, 1
+        mov rdi, 1
         mov rsi, place
-        mov edx, 1
+        mov rdx, 1
         syscall
 
         dec rbx
@@ -79,14 +79,14 @@ print:
         add rax, '0'
         mov [place], al
 
-        mov eax, 1
-        mov edi, 1
+        mov rax, 1
+        mov rdi, 1
         mov rsi, place
-        mov edx, 1
+        mov rdx, 1
         syscall
         ret
 
 exit:
-  mov eax, 1
-  mov ebx, 0
+  mov rax, 1
+  mov rbx, 0
   int 0x80

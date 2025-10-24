@@ -53,10 +53,10 @@ print:
         add rax, '0'
         mov [place], al
 
-        mov eax, 1
-        mov edi, 1
+        mov rax, 1
+        mov rdi, 1
         mov rsi, place
-        mov edx, 1
+        mov rdx, 1
         syscall
 
         dec rbx
@@ -68,9 +68,9 @@ print:
         add rax, '0'
         mov [place], al
 
-        mov eax, 1
-        mov edi, 1
+        mov rax, 1
+        mov rdi, 1
         mov rsi, place
-        mov edx, 1
+        mov rdx, 1
         syscall
         ret
