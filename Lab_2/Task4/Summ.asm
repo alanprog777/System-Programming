@@ -9,20 +9,19 @@ section '.data'
 
 section '.bss' writable
   num dq 5277616985
-  ;str db 0xA
-  res dq 0            ;сумма цифр
+  res dq 0
   ten dq 10
-  place db 1          ; Место для временного хранения символа для вывода
+  place db 1
 
 section '.text' executable
   _start:
     mov rax, [num]
-    xor rbx, rbx        ; для суммы цифр
+    xor rbx, rbx
 
     .sum_loop:
       xor rdx, rdx
-      div qword [ten]         ;рез в rax ост в rdx
-      add rbx, rdx          ;остаток в сумму
+      div qword [ten]
+      add rbx, rdx
       cmp rax, 0
       jne .sum_loop
 
@@ -36,10 +35,10 @@ section '.text' executable
     call exit
 
 newline:
-    mov rax, 1            ; sys_write
-    mov rdi, 1            ; stdout
-    mov rsi, nl           ; указатель на символ новой строки
-    mov rdx, 1            ; длина
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, nl
+    mov rdx, 1
     syscall
     ret
 
@@ -48,21 +47,21 @@ print:
     xor rbx, rbx
 
     cmp rax, 9
-    jle .single_digit       ;если один разряд сразу вывод как символа
+    jle .single_digit
 
-    mov rcx, 10             ;делитель
+    mov rcx, 10
     .loop:
         xor rdx, rdx
-        div rcx                ;час rax ост rdx
-        push rdx               ;цифру в стек
+        div rcx
+        push rdx
         inc rbx
-        test rax, rax           ;частно = 0
+        test rax, rax
         jnz .loop
 
     .print_loop:
         pop rax
-        add rax, '0'             ;аскии
-        mov [place], al         ;вывод побайтово
+        add rax, '0'
+        mov [place], al
 
         mov eax, 1
         mov edi, 1

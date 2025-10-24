@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     int c = atoi(argv[2]);
 
     if (b == 0) {
-        printf("Ошибк! Деление на 0\n");
+        printf("Ошибка! Деление на 0\n");
         return 1;
     }
 
