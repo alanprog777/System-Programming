@@ -31,7 +31,8 @@ section '.text' executable
 
     call print
     call newline
-    mov eax, 60
+
+    mov rax, 60
     xor edi, edi
     call exit
 

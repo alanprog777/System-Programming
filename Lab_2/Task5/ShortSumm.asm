@@ -26,10 +26,10 @@ public print
 
     call print
 
-    mov eax, 60
-    xor edi, edi
-    mov eax, 1;exit
-    mov ebx, 0
+    mov rax, 60
+    xor rdi, edi
+    mov rax, 1;exit
+    mov rbx, 0
     int 0x80
 
 print:
