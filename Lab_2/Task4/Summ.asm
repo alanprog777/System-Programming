@@ -4,7 +4,6 @@ public _start
 public print
 
   num dq 568093600
-  ;str db 0xA
   res dq 0
   ten dq 10
   place db 1
@@ -95,7 +94,7 @@ print:
 
     .sum_loop:
       xor rdx, rdx
-      div qword [ten]
+      div qword [ten] ; Делим RAX на 10: RAX = частное, RDX = остаток (последняя цифра)
       add rbx, rdx
       cmp rax, 0
       jne .sum_loop
