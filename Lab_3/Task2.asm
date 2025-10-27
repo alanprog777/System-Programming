@@ -63,7 +63,7 @@ error_args:
     jmp exit
 
 calculate:
-    ; Вычисляем выражение: (((c-b)-b)/b)
+    ;(((c-b)-b)/b)
     mov rax, [c]        ; RAX = c
     sub rax, [b]        ; RAX = c - b
     sub rax, [b]        ; RAX = (c - b) - b

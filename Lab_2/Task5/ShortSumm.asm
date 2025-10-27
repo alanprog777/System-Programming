@@ -4,7 +4,6 @@ public _start
 public print
 
   num dq 568093600
-  ;str db 0xA
   res dq 0
   ten dq 10
   place db 1          ; место для временного хранения символа для вывода

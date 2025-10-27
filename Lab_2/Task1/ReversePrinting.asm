@@ -12,7 +12,7 @@ _start:
     push rcx
 
     mov rax, symbols
-    add rax, rcx
+    add rax, rcx       ; прибавляем к адресу значение RCX и получаем адрес текущего символа
     mov rcx, rax
 
     mov rax, 4
@@ -25,7 +25,6 @@ _start:
     dec rcx
     cmp rcx, -1
     jne .iter
-
 
   call exit
 
