@@ -9,7 +9,6 @@ section '.data'
 
 section '.bss' writable
   num dq 5277616985
-  ;str db 0xA
   res dq 0            ;сумма цифр
   ten dq 10
   place db 1          ; Место для временного хранения символа для вывода
