@@ -1,35 +1,30 @@
 format ELF64
 public _start
 
-section '.data' writable
-    dot db ".", 0
-    slash db "/", 0
-    name_dir db "name", 0
-
 section '.text' executable
 _start:
-    pop rcx
+    pop rcx                    ;аргументы кмандной строки
     cmp rcx, 3
     jl exit_program
 
-    pop rsi
-    pop rdi
-    pop rbx
+    pop rsi                    ;имя программы
+    pop rdi                    ;имя каталога
+    pop rbx                    ;число копий
 
-    xor r8, r8
-    xor r9, r9
+    xor r8, r8                 ;хранить итоговое число
+    xor r9, r9                 ;индекс
 
-convert_loop:
-    mov al, [rbx + r9]
-    test al, al
+convert_loop:                  ;преобразуем строку в число
+    mov al, [rbx + r9]         ;читаем символ из строки
+    test al, al                ;проверяме на конец строки
     jz convert_done
 
-    cmp al, '0'
+    cmp al, '0'                ;проверка на цифру
     jb convert_done
     cmp al, '9'
     ja convert_done
 
-    sub al, '0'
+    sub al, '0'                ;символ в цифру
     imul r8, 10
     add r8, rax
 
@@ -40,34 +35,28 @@ convert_done:
     cmp r8, 0
     jle exit_program
 
-    mov rax, 80
-    mov rsi, rdi
+    mov rax, 80                ; sys_chdir (создали и вошли)
     syscall
-
     test rax, rax
     js exit_program
 
-    mov rcx, r8
+    mov rcx, r8               ;счетчик
 
 create_loop:
     push rcx
+    push rdi
 
-    mov rax, 83
-    mov rdi, name_dir
+    mov rax, 83                ;sys_mkdir
     mov rsi, 0755o
     syscall
-
-    test rax, rax
     js .next_iteration
 
-    mov rax, 80
-    mov rdi, name_dir
+    mov rax, 80                ;sys_chdir
     syscall
-
-    test rax, rax
     js .next_iteration
-    
+
 .next_iteration:
+    pop rdi
     pop rcx
     loop create_loop
 

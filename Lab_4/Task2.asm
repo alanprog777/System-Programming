@@ -54,11 +54,9 @@ convert_loop:
 convert_done:
     mov r8, rbx                ; R8 = n
 
-    ; Проверяем валидность ввода
     cmp r8, 0
     jle end_program
 
-    ; Вычисляем сумму 1 - 2² + 3² - 4² + ... + (-1)^(k+1) * k²
     xor rax, rax               ; сумма = 0
     mov rbx, 1                 ; k = 1
 
@@ -67,15 +65,12 @@ sum_loop:
     mov r11, rbx               ; R11 = k
     imul r11, rbx              ; R11 = k²
 
-    ; Определяем знак: для нечетных k - положительный, для четных - отрицательный
     test rbx, 1                ; проверяем младший бит (четность k)
     jz .even                   ; если четное, переходим к отрицательному знаку
 
-    ; Нечетное k - положительный знак
     add rax, r11               ; добавляем k² к сумме
     jmp .next
 .even:
-    ; Четное k - отрицательный знак
     sub rax, r11               ; вычитаем k² из суммы
 
 .next:
@@ -85,14 +80,13 @@ sum_loop:
 
     mov [result], rax
 
-    ; Выводим сообщение "Результат: "
     mov rax, 1                 ; sys_write
     mov rdi, 1                 ; stdout
     mov rsi, result_msg
     mov rdx, result_msg_len
     syscall
 
-    ; Выводим само число (результат)
+    ; Выводим само число
     mov rax, [result]
     call print_number
 
@@ -141,12 +135,10 @@ print_number:
     test r11, r11              ; проверяем если делимое равно нулю
     jnz .convert_loop          ; если не равно нулю продолжаем
 
-    ; Добавляем знак минус если нужно
     mov rax, [result]
     test rax, rax
     jns .print
 
-    ; Если отрицательное, добавляем минус
     dec rsi
     mov byte [rsi], '-'
 

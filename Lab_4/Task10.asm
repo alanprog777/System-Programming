@@ -1,121 +1,137 @@
 format ELF64
-
 public _start
-public printMenu
-public enterPassword
-public exit
-public printEnd
-public printFail
-public printAgain
-
 
 section '.data' writable
-    password db "qwerty123"
-    msg rb 255
-    menu db "Enter password: "
-    endWord db "Successfully", 0xA
-    fail db "Failure", 0xA
-    again db "Try again", 0xA
+    prompt db "Введите пароль: ", 0
+    prompt_len = $ - prompt
+    success_msg db "Вошли", 0xA, 0
+    success_msg_len = $ - success_msg
+    wrong_msg db "Неверный пароль", 0xA, 0
+    wrong_msg_len = $ - wrong_msg
+    fail_msg db "Неудача", 0xA, 0
+    fail_msg_len = $ - fail_msg
+    newline db 0xA
+    correct_password db "qwerty123", 0
+    correct_password_len = $ - correct_password - 1
+
+section '.bss' writable
+    input_buffer rb 32
+    attempts_count rq 1
 
 section '.text' executable
 _start:
-    xor rbx, rbx
-    .iter:
-        xor rcx, rcx
-        call printMenu
-        call enterPassword
-        inc rbx
-        cmp rbx, 5
-        je .iter_exit
-        cmp rax, 10
-        jne .iter_continue
-        jmp .iter2
+    mov qword [attempts_count], 0
 
-        .iter2:
-            mov al, [msg + rcx]
-            mov bl, [password + rcx]
-            cmp al, bl
-            jne .iter_continue
-            inc rcx
+auth_loop:
+    inc qword [attempts_count]
+    cmp qword [attempts_count], 5
+    jg too_many_attempts
 
-            cmp rcx, 9
-            jne .iter2
-
-            jmp .success_exit
-
-        .iter_exit:
-            call printFail
-            call exit
-
-        .iter_continue:
-            call printAgain
-            jmp .iter
-
-
-        .iter2_continue:
-            cmp rcx, 9
-            jne .iter2
-
-        .success_exit:
-            call printEnd
-            call exit
-
-
-
-
-
-
-printMenu:
-    push rcx
+    ; Выводим приглашение для ввода
     mov rax, 1
     mov rdi, 1
-    mov rsi, menu
-    mov rdx, 16
+    mov rsi, prompt
+    mov rdx, prompt_len
     syscall
-    pop rcx
-    ret
 
-enterPassword:
-    push rcx
+    ; Читаем ввод пароля
     mov rax, 0
     mov rdi, 0
-    mov rsi, msg
-    mov rdx, 255
+    mov rsi, input_buffer
+    mov rdx, 32
     syscall
-    pop rcx
-    ret
 
-printEnd:
-    push rcx
+    ; Проверяем пароль
+    call check_password
+    test rax, rax
+    jnz success
+
+    ; Неверный пароль
     mov rax, 1
     mov rdi, 1
-    mov rsi, endWord
-    mov rdx, 13
+    mov rsi, wrong_msg
+    mov rdx, wrong_msg_len
     syscall
-    pop rcx
-    ret
 
-printFail:
-    push rcx
+    jmp auth_loop
+
+too_many_attempts:
+    ; Слишком много неудачных попыток
     mov rax, 1
     mov rdi, 1
-    mov rsi, fail
-    mov rdx, 8
+    mov rsi, fail_msg
+    mov rdx, fail_msg_len
     syscall
-    pop rcx
-    ret
+    jmp end_program
 
-printAgain:
-    push rcx
+success:
+    ; Успешная аутентификация
     mov rax, 1
     mov rdi, 1
-    mov rsi, again
-    mov rdx, 10
+    mov rsi, success_msg
+    mov rdx, success_msg_len
     syscall
-    pop rcx
-    ret
 
-exit:
+end_program:
     mov rax, 60
-    mov rdi, 0
+    xor rdi, rdi
     syscall
+
+; Функция проверки пароля
+; Возвращает в RAX: 1 - пароль верный, 0 - пароль неверный
+check_password:
+    push rbx
+    push rcx
+    push rsi
+    push rdi
+
+    mov rsi, correct_password   ; Указатель на правильный пароль
+    mov rdi, input_buffer       ; Указатель на введенный пароль
+    xor rcx, rcx
+
+compare_loop:
+    ; Сравниваем символы
+    mov al, [rsi + rcx]
+    mov bl, [rdi + rcx]
+
+    ; Проверяем конец правильного пароля
+    cmp al, 0
+    je check_input_end
+
+    cmp bl, 10
+    je check_input_end
+    cmp bl, 0
+    je check_input_end
+
+    ; Сравниваем символы
+    cmp al, bl
+    jne password_wrong
+
+    inc rcx
+    jmp compare_loop
+
+check_input_end:
+    ; Проверяем, что оба пароля закончились одновременно
+    cmp al, 0
+    jne password_wrong
+
+    cmp bl, 10
+    je password_correct
+    cmp bl, 0
+    je password_correct
+
+    jmp password_wrong
+
+password_correct:
+    mov rax, 1
+    jmp check_done
+
+password_wrong:
+    xor rax, rax
+
+check_done:
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rbx
+    ret

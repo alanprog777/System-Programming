@@ -26,6 +26,7 @@ _start:
     cmp rcx, -1
     jne .iter
 
+
   call exit
 
 

@@ -6,12 +6,10 @@ public print
 
 section '.data'
   nl db 10
-
-section '.bss' writable
   num dq 5277616985
   res dq 0            ;сумма цифр
   ten dq 10
-  place db 1          ; Место для временного хранения символа для вывода
+  place db 1
 
 section '.text' executable
   _start:

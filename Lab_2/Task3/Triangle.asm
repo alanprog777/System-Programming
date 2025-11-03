@@ -4,7 +4,7 @@ public _start
 public exit
 public print
 
-section '.bss' writable
+section '.data' writable
   plus db 15 dup ('+')
   newline db 15 dup (0xA)
   place db 1

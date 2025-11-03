@@ -5,7 +5,6 @@ public exit
 section '.bss' writable
 plus db "+"
 newline db 0xA
-N db 66
 K db 6
 M db 11
 
