@@ -9,17 +9,19 @@ section '.data' writable
 
 section '.text' executable
 _start:
+    ; Проверяем количество аргументов
     pop rcx              ; argc
     cmp rcx, 2
-    jl exit_program      ; если меньше 2 аргументов - выходим
+    jl exit              ; если меньше 2 аргументов - выходим (ИСПРАВЛЕНО: было exit_program)
 
+    ; Пропускаем имя программы
     pop rsi
 
     pop rsi
 
     mov al, [rsi]        ; первый символ аргумента
     cmp byte [rsi + 1], 0 ; проверяем что второй символ - конец строки
-    jne exit_program     ; если не конец строки - выходим
+    jne exit             ; если не конец строки - выходим (ИСПРАВЛЕНО: было exit_program)
 
     mov rax, 1           ; sys_write
     mov rdi, 1           ; stdout
