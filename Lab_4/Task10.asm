@@ -24,7 +24,7 @@ _start:
 
 auth_loop:
     inc qword [attempts_count]
-    cmp qword [attempts_count], 5
+    cmp qword [attempts_count], 3
     jg too_many_attempts
 
     ; Выводим приглашение для ввода

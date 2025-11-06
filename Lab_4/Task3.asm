@@ -72,7 +72,7 @@ sum_loop:
     ; Вычисляем (3k+2)
     mov r9, rbx
     imul r9, 3                 ; r9 = 3k
-    add r9, 2                  ; r9 = 3k+2
+    add r9, 2                  ; r9 = 3k+2      
 
     imul r8, r9                ; r8 = k(k+1)(3k+1)(3k+2)
 

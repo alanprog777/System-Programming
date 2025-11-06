@@ -14,16 +14,14 @@ section '.bss' writable
 
 section '.text' executable
 _start:
-    ; Выводим приглашение для ввода
-    mov rax, 1                  ; sys_write
-    mov rdi, 1                  ; stdout
+    mov rax, 1
+    mov rdi, 1
     mov rsi, prompt
     mov rdx, prompt_len
     syscall
 
-    ; Читаем ввод от пользователя
-    mov rax, 0                  ; sys_read
-    mov rdi, 0                  ; stdin
+    mov rax, 0
+    mov rdi, 0
     mov rsi, input_buffer
     mov rdx, 16
     syscall
@@ -80,8 +78,8 @@ sum_loop:
 
     mov [result], rax
 
-    mov rax, 1                 ; sys_write
-    mov rdi, 1                 ; stdout
+    mov rax, 1
+    mov rdi, 1
     mov rsi, result_msg
     mov rdx, result_msg_len
     syscall
@@ -90,9 +88,8 @@ sum_loop:
     mov rax, [result]
     call print_number
 
-    ; Выводим новую строку
-    mov rax, 1                 ; sys_write
-    mov rdi, 1                 ; stdout
+    mov rax, 1
+    mov rdi, 1
     mov rsi, newline
     mov rdx, 1
     syscall
