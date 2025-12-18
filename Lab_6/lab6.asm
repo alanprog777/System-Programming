@@ -32,7 +32,7 @@ format ELF64
 	max_x dq 0          ;; Максимальная координата X
 	max_y dq 0          ;; Максимальная координата Y
 	speed dq 10000
-	palette dq 1        ;; Текущий цвет (1 = CYAN, 2 = MAGENTA)
+	palette dq 1        ;; Текущий цвет (1 = red, 2 = green)
 	fill_complete dq 0
 	speed_level dq 1    ;; Уровень скорости (1-5)
 
@@ -62,7 +62,6 @@ _start:
 	mov rdi, 1
 	call init_pair
 
-	;; MAGENTA
 	mov rdx, 2
 	mov rsi, 2
 	mov rdi, 2
@@ -88,18 +87,16 @@ mloop:
 
 	mov rax, [fill_complete]
 	cmp rax, 0
-	je .cyan_fill
-	jmp .magenta_fill
+	je .red_fill
+	jmp .green_fill
 
-.cyan_fill:
-	;; Заполняем CYAN
+.red_fill:
 	call get_space
 	or rax, 0x100
 	mov [palette], rax
 	jmp .print_char
 
-.magenta_fill:
-	;; Заполняем MAGENTA
+.green_fill:
 	call get_space
 	or rax, 0x200
 	mov [palette], rax
@@ -146,13 +143,13 @@ mloop:
 	;; Достигли нижнего края
 	mov rax, [fill_complete]
 	cmp rax, 0
-	jne .restart_cyan
+	jne .restart_red
 
-	;; Переключаем на заполнение MAGENTA
+
 	mov qword [fill_complete], 1
 	jmp .restart_position
 
-.restart_cyan:
+.restart_red:
 	mov qword [fill_complete], 0
 
 .restart_position:
