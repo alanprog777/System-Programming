@@ -10,7 +10,6 @@ section '.data' writeable
     task10_path     db '/home/alan/System-Programming/Lab_7/Task1/Task10', 0
     lab6_path       db '/home/alan/System-Programming/Lab_6/lab6', 0
 
-    ; Аргументы для Task3 и Task10 (их собственные input/output файлы)
     task3_input     db 'input.txt', 0
     task3_output    db 'output.txt', 0
     task10_input    db 'input.txt', 0
