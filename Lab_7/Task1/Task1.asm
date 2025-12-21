@@ -171,7 +171,7 @@ _start:
     mov r13, task10_path
     jmp .fork_process
 
-; ================= ЗАПУСК LAB6 =================
+;  ЗАПУСК LAB6
 .exec_lab6:
     mov qword [arg_array], lab6_path    ; argv[0] = "./Lab_6/lab6"
     mov qword [arg_array + 8], 0        ; NULL
@@ -179,7 +179,7 @@ _start:
     mov r13, lab6_path
     jmp .fork_process
 
-; ================= СОЗДАНИЕ ПРОЦЕССА =================
+; СОЗДАНИЕ ПРОЦЕССА
 .fork_process:
     mov rax, 57       ; sys_fork
     syscall
@@ -188,7 +188,7 @@ _start:
     jl .fork_error
     jg .parent_process
 
-    ; ================= ДОЧЕРНИЙ ПРОЦЕСС =================
+    ;  ДОЧЕРНИЙ ПРОЦЕСС
 .child_process:
     mov rax, 59       ; sys_execve
     mov rdi, r13      ; путь к программе

@@ -63,7 +63,6 @@ _start:
     ; Вывод всего массива
     call print_array
 
-    ; ========== ЗАПУСК ПРОЦЕССОВ ==========
 
     ; Задача 1 - Пятое после минимального
     mov rax, 57              ; sys_fork
@@ -97,7 +96,6 @@ _start:
     call free_memory
     call exit
 
-; ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
 wait_child:
     push rax
@@ -198,7 +196,6 @@ create_sorted_copy:
     ret
 
 print_array:
-    ; Выводим ВСЕ числа (зависит от COUNT)
     mov rcx, COUNT           ; используем COUNT как количество чисел
     mov rbx, [array_ptr]
     xor r14, r14             ; счетчик чисел в строке (от 0 до NUMBERS_PER_LINE-1)
