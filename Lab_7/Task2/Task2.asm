@@ -2,55 +2,77 @@ format elf64
 public _start
 
 COUNT = 20
+NUMBERS_PER_LINE = 10
 
 section '.bss' writable
-    array_ptr rq 1
-    buffer    rb 256
+    array_ptr      rq 1      ; Указатель на исходный массив
+    sorted_ptr     rq 1      ; Указатель на отсортированную копию
+    buffer         rb 256
 
 section '.data' writable
-    dev_urandom db "/dev/urandom", 0
-    space_char  db " ", 0
-    newline     db 10, 0
+    dev_urandom    db "/dev/urandom", 0
+    space_char     db " ", 0
+    newline        db 10, 0
 
-    msg_gen     db "Сгенерированный массив (0-999): ", 10, 0
-    msg_min     db "1. Пятое после минимального: ", 0
-    msg_median  db "2. Медиана (округленная до целого): ", 0
-    msg_quant   db "3. 0.75 квантиль: ", 0
-    msg_sum3    db "4. Количество чисел, сумма цифр которых кратна 3: ", 0
+    msg_gen        db "Сгенерированный массив из ", 0
+    msg_count      db " чисел (0-999):", 10, 10, 0
+    msg_min        db "1. Пятое после минимального: ", 0
+    msg_median     db "2. Медиана (округленная до целого): ", 0
+    msg_quant      db "3. 0.75 квантиль: ", 0
+    msg_sum3       db "4. Количество чисел, сумма цифр которых кратна 3: ", 0
 
 section '.text' executable
 
 _start:
-    ; Выделение памяти
+    ; Выделение памяти для исходного массива
+    mov rax, 9               ; sys_mmap
+    xor rdi, rdi             ; адрес (0 = авто)
+    mov rsi, COUNT * 4       ; размер
+    mov rdx, 3               ; PROT_READ|PROT_WRITE
+    mov r10, 34              ; MAP_PRIVATE|MAP_ANONYMOUS
+    mov r8, -1               ; fd = -1
+    xor r9, r9               ; offset = 0
+    syscall
+    mov [array_ptr], rax
+
+    ; Выделение памяти для отсортированной копии
     mov rax, 9
-    mov rdi, 0
+    xor rdi, rdi
     mov rsi, COUNT * 4
     mov rdx, 3
     mov r10, 34
     mov r8, -1
-    mov r9, 0
+    xor r9, r9
     syscall
-    mov [array_ptr], rax
+    mov [sorted_ptr], rax
 
-    ; Заполнение массива
+    ; Заполнение массива случайными числами
     call fill_random_array
 
-    ; Вывод массива
+    ; Создаем отсортированную копию
+    call create_sorted_copy
+
+    ; Вывод заголовка массива
     mov rsi, msg_gen
     call print_string
+    mov rax, COUNT
+    call print_number
+    mov rsi, msg_count
+    call print_string
+
+    ; Вывод всего массива
     call print_array
 
+    ; ========== ЗАПУСК ПРОЦЕССОВ ==========
+
     ; Задача 1 - Пятое после минимального
-    mov rax, 57
+    mov rax, 57              ; sys_fork
     syscall
     cmp rax, 0
     je do_task1
     call wait_child
 
-    ; Задача 2 - Медиана (требует сортировки)
-    ; Создаем отсортированную копию для медианы и квантиля
-    call create_sorted_copy_for_tasks
-
+    ; Задача 2 - Медиана
     mov rax, 57
     syscall
     cmp rax, 0
@@ -71,20 +93,23 @@ _start:
     je do_task4
     call wait_child
 
+    ; Освобождение памяти и выход
+    call free_memory
     call exit
 
 ; ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+
 wait_child:
     push rax
     push rdi
     push rsi
     push rdx
     push r10
-    mov rax, 61
+    mov rax, 61              ; sys_wait4
     mov rdi, -1
-    mov rsi, 0
-    mov rdx, 0
-    mov r10, 0
+    xor rsi, rsi
+    xor rdx, rdx
+    xor r10, r10
     syscall
     pop r10
     pop rdx
@@ -93,23 +118,41 @@ wait_child:
     pop rax
     ret
 
+free_memory:
+    ; Освобождаем память исходного массива
+    mov rax, 11              ; sys_munmap
+    mov rdi, [array_ptr]
+    mov rsi, COUNT * 4
+    syscall
+
+    ; Освобождаем память отсортированного массива
+    mov rax, 11
+    mov rdi, [sorted_ptr]
+    mov rsi, COUNT * 4
+    syscall
+    ret
+
 fill_random_array:
-    mov rax, 2
+    ; Открываем /dev/urandom
+    mov rax, 2               ; sys_open
     mov rdi, dev_urandom
-    mov rsi, 0
+    xor rsi, rsi             ; O_RDONLY
     syscall
     mov rbx, rax
 
-    mov rax, 0
+    ; Читаем случайные числа
+    xor rax, rax             ; sys_read
     mov rdi, rbx
     mov rsi, [array_ptr]
     mov rdx, COUNT * 4
     syscall
 
-    mov rax, 3
+    ; Закрываем файл
+    mov rax, 3               ; sys_close
     mov rdi, rbx
     syscall
 
+    ; Нормализуем числа в диапазон 0-999
     mov rcx, COUNT
     mov rbx, [array_ptr]
 .norm_loop:
@@ -123,53 +166,15 @@ fill_random_array:
     loop .norm_loop
     ret
 
-print_array:
-    mov rcx, COUNT
-    mov rbx, [array_ptr]
-    xor r14, r14
-.p_loop:
-    mov eax, [rbx]
-    call print_number
-    mov rsi, space_char
-    call print_string
-    add rbx, 4
-    inc r14
-    cmp r14, 20
-    jne .no_newline
-    call print_newline
-    xor r14, r14
-.no_newline:
-    loop .p_loop
-    call print_newline
-    call print_newline
-    ret
-
-; Создаем временную отсортированную копию только для медианы и квантиля
-create_sorted_copy_for_tasks:
-    ; Выделяем временную память для сортировки
-    push rbx
-    push rcx
-    push rsi
-    push rdi
-
-    mov rax, 9
-    mov rdi, 0
-    mov rsi, COUNT * 4
-    mov rdx, 3
-    mov r10, 34
-    mov r8, -1
-    mov r9, 0
-    syscall
-    mov r15, rax        ; сохраняем указатель на временный массив
-
-    ; Копируем исходный массив
+create_sorted_copy:
+    ; Копируем исходный массив в отсортированную копию
     mov rsi, [array_ptr]
-    mov rdi, r15
+    mov rdi, [sorted_ptr]
     mov rcx, COUNT
     rep movsd
 
-    ; Сортируем пузырьковой сортировкой
-    mov rbx, r15
+    ; Сортируем копию пузырьковой сортировкой
+    mov rbx, [sorted_ptr]
     mov rcx, COUNT
     dec rcx
 .outer_loop:
@@ -190,105 +195,138 @@ create_sorted_copy_for_tasks:
     loop .inner_loop
     pop rcx
     loop .outer_loop
-
-    ; Сохраняем отсортированный массив в глобальной переменной
-    mov [array_ptr + 8], r15  ; используем array_ptr + 8 как sorted_ptr
-
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rbx
     ret
 
-; ========== ЗАДАЧА 1 ==========
+print_array:
+    ; Выводим ВСЕ числа (зависит от COUNT)
+    mov rcx, COUNT           ; используем COUNT как количество чисел
+    mov rbx, [array_ptr]
+    xor r14, r14             ; счетчик чисел в строке (от 0 до NUMBERS_PER_LINE-1)
+
+.print_loop:
+    ; Выводим текущее число
+    mov eax, [rbx]
+    call print_number
+
+    ; Если не последнее число в строке, выводим пробел
+    mov r15, rcx
+    dec r15                  ; r15 = текущий индекс в цикле
+    test r15, r15            ; если r15 = 0, это последнее число
+    jz .no_space
+
+    mov rsi, space_char
+    call print_string
+
+.no_space:
+    ; Переходим к следующему числу
+    add rbx, 4
+    inc r14
+
+    ; Проверяем, нужно ли перейти на новую строку
+    cmp r14, NUMBERS_PER_LINE
+    jl .check_next
+
+    ; Достигли конца строки - переходим на новую строку
+    call print_newline
+    xor r14, r14             ; сбрасываем счетчик чисел в строке
+
+.check_next:
+    loop .print_loop
+
+    ; Если последняя строка была неполной, добавляем перевод строки
+    cmp r14, 0
+    je .no_extra_newline
+    call print_newline
+
+.no_extra_newline:
+    ; Завершаем вывод массива
+    call print_newline
+    ret
+
 ; ========== ЗАДАЧА 1 ==========
 do_task1:
     mov rsi, msg_min
     call print_string
 
-    ; Находим минимальное значение и позицию ПОСЛЕДНЕГО минимального
     mov rbx, [array_ptr]
-    mov ecx, COUNT
+    mov rcx, COUNT
 
-    ; Первый элемент как начальное минимальное
+    ; Находим минимальное значение
     mov eax, [rbx]
-    mov r14d, eax       ; минимальное значение
-    xor r15, r15        ; позиция последнего минимального
-    mov r13, 0          ; текущий индекс
+    mov r14d, eax            ; минимальное значение
+    mov r15, rbx             ; адрес минимального
 
-.find_min:
+.find_min_loop:
     mov eax, [rbx]
     cmp eax, r14d
-    jg .greater
-    jl .new_min
-
-    ; Равно минимальному - обновляем позицию
-    mov r15, r13
-    jmp .continue
-
-.new_min:
-    mov r14d, eax       ; новое минимальное
-    mov r15, r13        ; сохраняем позицию
-    jmp .continue
-
-.greater:
-    ; Больше минимального - ничего не делаем
-    jmp .continue
-
-.continue:
+    jge .not_min
+    mov r14d, eax
+    mov r15, rbx
+.not_min:
     add rbx, 4
-    inc r13
-    loop .find_min
+    loop .find_min_loop
 
-    ; Вычисляем стартовую позицию для поиска
-    mov rax, r15        ; позиция последнего минимального
-    add rax, 5          ; пятое после минимального
+    ; Находим пятый элемент ПОСЛЕ минимального
+    mov rbx, r15
+    add rbx, 20              ; 5 элементов * 4 байта
 
-    ; Проверяем, что не вышли за границы массива
-    cmp rax, COUNT
+    ; Проверяем границы
+    mov rax, [array_ptr]
+    add rax, COUNT * 4
+    cmp rbx, rax
     jge .out_of_bounds
 
-    ; Получаем значение по индексу
-    mov rbx, [array_ptr]
-    mov eax, [rbx + rax*4]
+    mov eax, [rbx]
     jmp .print_result
 
 .out_of_bounds:
-    mov eax, 0
+    ; Если вышли за границы, берем последний элемент
+    mov rbx, [array_ptr]
+    mov rax, COUNT
+    dec rax
+    mov eax, [rbx + rax*4]
 
 .print_result:
     call print_number
     call print_newline
     call print_newline
     call exit
+
 ; ========== ЗАДАЧА 2 ==========
 do_task2:
     mov rsi, msg_median
     call print_string
 
-    ; Используем отсортированную копию
-    mov rbx, [array_ptr + 8]  ; отсортированный массив
+    mov rbx, [sorted_ptr]
 
     ; Проверяем четность количества элементов
     mov rax, COUNT
-    and rax, 1
+    and rax, 1               ; проверяем младший бит
     jnz .odd_count
 
     ; Четное количество: медиана = среднее двух центральных
     mov rax, COUNT
-    shr rax, 1          ; rax = COUNT/2
+    shr rax, 1               ; rax = COUNT/2
 
-    mov edx, [rbx + rax*4 - 4]  ; элемент слева от центра
-    add edx, [rbx + rax*4]      ; + элемент справа от центра
+    ; Получаем первый элемент (COUNT/2 - 1)
+    mov rdx, rax
+    dec rdx                  ; rdx = COUNT/2 - 1
+    mov edx, [rbx + rdx*4]   ; элемент слева от центра
 
+    ; Получаем второй элемент (COUNT/2)
+    mov ecx, [rbx + rax*4]   ; элемент справа от центра
+
+    ; Складываем и делим на 2
+    add edx, ecx
     mov eax, edx
-    shr eax, 1          ; делим на 2
+    shr eax, 1               ; делим на 2
+
     jmp .print_result
 
 .odd_count:
     ; Нечетное количество: медиана = центральный элемент
     mov rax, COUNT
-    shr rax, 1
+    shr rax, 1               ; rax = COUNT/2 (целочисленное деление)
     mov eax, [rbx + rax*4]
 
 .print_result:
@@ -302,21 +340,18 @@ do_task3:
     mov rsi, msg_quant
     call print_string
 
-    ; Используем отсортированную копию
-    mov rbx, [array_ptr + 8]  ; отсортированный массив
-
-    ; 0.75 квантиль = элемент с индексом floor(0.75 * (n-1))
+    ; 0.75 квантиль для COUNT элементов
+    ; Индекс = floor(0.75 * (n-1))
     mov rax, COUNT
-    dec rax             ; n-1
-
-    ; Умножаем на 3 и делим на 4 (это то же самое что умножить на 0.75)
+    dec rax                  ; n-1
     mov rdx, 3
-    mul rdx             ; rax * 3
+    mul rdx                  ; rax * 3
     mov rdx, 0
     mov rcx, 4
-    div rcx             ; /4
+    div rcx                  ; /4
+    ; rax содержит индекс 0.75 квантиля
 
-    ; rax содержит индекс
+    mov rbx, [sorted_ptr]
     mov eax, [rbx + rax*4]
 
     call print_number
@@ -329,40 +364,37 @@ do_task4:
     mov rsi, msg_sum3
     call print_string
 
-    ; Используем исходный массив
     mov rbx, [array_ptr]
-    mov rcx, COUNT
-    xor r12, r12        ; счетчик
+    mov ecx, COUNT
+    xor r12, r12             ; счетчик
 
-.loop:
+.process_loop:
     mov eax, [rbx]
-    mov r15d, eax       ; сохраняем число
+    mov r15d, eax
 
     ; Считаем сумму цифр
     xor r9d, r9d
     mov edi, 10
-.digits_sum:
+.sum_digits:
     xor edx, edx
     div edi
     add r9d, edx
     test eax, eax
-    jnz .digits_sum
+    jnz .sum_digits
 
-    ; Проверяем сумму на кратность 3
+    ; Проверяем кратность 3
     mov eax, r9d
     xor edx, edx
     mov edi, 3
     div edi
-
     test edx, edx
-    jnz .skip
-
+    jnz .not_multiple
     inc r12
 
-.skip:
+.not_multiple:
     add rbx, 4
-    dec rcx
-    jnz .loop
+    dec ecx
+    jnz .process_loop
 
     mov rax, r12
     call print_number
@@ -371,73 +403,12 @@ do_task4:
     call exit
 
 ; ========== ФУНКЦИИ ВВОДА/ВЫВОДА ==========
-input_keyboard:
-    push rax
-    push rdi
-    push rdx
-    push rcx
-
-    mov rax, 0
-    mov rdi, 0
-    mov rdx, 255
-    syscall
-
-    xor rcx, rcx
-.find_end:
-    mov al, [rsi + rcx]
-    cmp al, 10
-    je .replace
-    cmp al, 0
-    je .done
-    inc rcx
-    jmp .find_end
-
-.replace:
-    mov byte [rsi + rcx], 0
-
-.done:
-    pop rcx
-    pop rdx
-    pop rdi
-    pop rax
-    ret
-
-atoi:
-    push rcx
-    push rbx
-    push rdx
-
-    xor rax, rax
-    xor rcx, rcx
-.loop:
-    xor rbx, rbx
-    mov bl, byte [rsi + rcx]
-    cmp bl, 0
-    je .finished
-    cmp bl, 48
-    jl .finished
-    cmp bl, 57
-    jg .finished
-
-    sub bl, 48
-    imul rax, 10
-    add rax, rbx
-    inc rcx
-    jmp .loop
-
-.finished:
-    pop rdx
-    pop rbx
-    pop rcx
-    ret
-
 print_number:
-    push rax
     push rbx
     push rcx
     push rdx
-    push rdi
     push rsi
+    push rdi
 
     mov rbx, buffer + 255
     mov byte [rbx], 0
@@ -468,12 +439,11 @@ print_number:
     mov rsi, rbx
     call print_string
 
-    pop rsi
     pop rdi
+    pop rsi
     pop rdx
     pop rcx
     pop rbx
-    pop rax
     ret
 
 print_string:
