@@ -6,8 +6,8 @@ section '.data' writeable
     arg_array       rq 12
 
     ; Пути к исполняемым файлам согласно структуре
-    task3_path      db '/home/alan/System-Programming/Lab_5/Task3/Task3', 0
-    task10_path     db '/home/alan/System-Programming/Lab_5/Task10/Task3', 0
+    task3_path      db '/home/alan/System-Programming/Lab_7/Task1/Task3', 0
+    task10_path     db '/home/alan/System-Programming/Lab_7/Task1/Task10', 0
     lab6_path       db '/home/alan/System-Programming/Lab_6/lab6', 0
 
     ; Аргументы для Task3 и Task10 (их собственные input/output файлы)
