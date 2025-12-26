@@ -38,113 +38,115 @@ section '.data' writable
 
 section '.bss' writable
     ; Общие переменные
-    epsilon        rq 1      ; Текущая погрешность
+    epsilon        rq 1      ; rq = reserve quadword (8 байт под double)
     pi_approx      rq 1      ; Приближенное значение π
     diff           rq 1      ; Разность с целевым значением
     terms_needed   rq 1      ; Количество членов ряда
 
-    ; Для ряда 1 (переименовано k1 → idx1)
-    idx1           rq 1      ; Индекс для ряда 1 (k)
-    sign1          rq 1      ; Знак (-1)^k
+    ; Для ряда 1
+    k              rq 1      ; Индекс для ряда 1
+    sign           rq 1      ; Знак (-1)^k
     term1          rq 1      ; Текущий член ряда 1
     sum1           rq 1      ; Сумма ряда 1
 
-    ; Для ряда 2 (переименовано k2 → idx2)
-    idx2           rq 1      ; Индекс для ряда 2 (n)
+    ; Для ряда 2
+    n              rq 1      ; Индекс для ряда 2
     term2          rq 1      ; Текущий член ряда 2 (1/k²)
     sum2           rq 1      ; Сумма ряда 2
+    sqrt_arg       rq 1      ; Аргумент для sqrt
 
 section '.text' executable
 
-; ============================================
-; РЯД 1: π = 3 + 4 * Σ [(-1)^k / ((2k+2)(2k+3)(2k+4))]
-; где k = 0, 1, 2, ...
-; ============================================
 compute_pi_series1:
-    push rbp
+    push rbp           ; Сохраняем старый указатель кадра стека
     mov rbp, rsp
 
-    ; Инициализация
-    finit
-    fld qword [const_0]
-    fstp qword [sum1]        ; sum1 = 0
+    ; Инициализация для каждой новой epsilon
+    finit                     ; Инициализируем сопроцессор
+    fldz
+    fstp qword [sum1]        ; sum1 = 0 (Сохраняем этот 0 в sum1 и очищаем стек)
 
-    mov qword [terms_needed], 0
-    mov qword [idx1], 0
-    mov qword [sign1], 1     ; (-1)^0 = 1
+    mov qword [terms_needed], 0   ; Сбрасываем счетчик членов
+    mov qword [k], 0
+    mov qword [sign], 1      ; (-1)^0 = 1
 
 .series1_loop:
+    ; Увеличиваем счетчик членов
     inc qword [terms_needed]
 
     ; Вычисляем знаменатель: (2k+2)(2k+3)(2k+4)
-    finit
-
-    ; 2k+2
-    fild qword [idx1]
-    fld qword [const_2]
+    fild qword [k]           ; k
+    fld qword [const_2]      ; 2
     fmulp st1, st0           ; 2k
-    fld qword [const_2]
+    fld qword [const_2]      ; 2
     faddp st1, st0           ; 2k+2
-    fst st1                  ; копируем в st1
+    fst st1                  ; сохраняем копию для следующего множителя
 
     ; 2k+3
-    fld qword [const_1]
-    faddp st1, st0           ; st1 = 2k+3
-    fmulp st2, st0           ; (2k+2)*(2k+3)
+    fld1                     ; 1
+    faddp st1, st0           ; 2k+3
 
     ; 2k+4
-    fild qword [idx1]
-    fld qword [const_2]
+    fild qword [k]           ; k
+    fld qword [const_2]      ; 2
     fmulp st1, st0           ; 2k
-    fld qword [const_4]
+    fld qword [const_4]      ; 4
     faddp st1, st0           ; 2k+4
-    fmulp st1, st0           ; (2k+2)(2k+3)(2k+4)
 
-    fst qword [term1]        ; сохраняем знаменатель
+    ; Перемножаем все три значения
+    fmulp st1, st0           ; (2k+3)*(2k+4)
+    fmulp st1, st0           ; (2k+2)*(2k+3)*(2k+4)
 
-    ; Вычисляем (-1)^k / знаменатель
-    fild qword [sign1]
-    fdiv qword [term1]
+    fstp qword [term1]       ; сохраняем знаменатель
+
+    ; Вычисляем член ряда: (-1)^k / знаменатель
+    fild qword [sign]        ; Загружаем sign (1 или -1)
+    fdiv qword [term1]       ; Делим на знаменатель
+    fstp qword [term1]       ; Получили член суммы
 
     ; Добавляем к сумме
     fld qword [sum1]
+    fld qword [term1]
     faddp st1, st0
     fstp qword [sum1]
 
-    ; Вычисляем текущее приближение π
+    ; Вычисляем приближение π = 3 + 4 * sum
     fld qword [sum1]
     fld qword [const_4]
     fmulp st1, st0           ; 4 * sum
     fld qword [const_3]
     faddp st1, st0           ; 3 + 4*sum
-    fstp qword [pi_approx]
+    fstp qword [pi_approx]   ;сохраняем результат
 
-    ; Проверяем точность
-    fld qword [target_pi]
-    fld qword [pi_approx]
+    ; Проверяем точность: |target_pi - pi_approx| <= epsilon
+    finit
+    fld qword [target_pi]    ; target_pi
+    fld qword [pi_approx]    ; pi_approx
     fsubp st1, st0           ; target - approx
     fabs                     ; |target - approx|
     fstp qword [diff]
 
+    ; Сравниваем diff с epsilon
     finit
     fld qword [diff]
     fld qword [epsilon]
+    fcomip st0, st1          ; st0 = epsilon, st1 = diff
+    fstp st0                 ; очищаем стек FPU
 
-    fcomip st1
-    fstp st0
-
-    jbe .converged1          ; если diff <= epsilon
+    ; Если epsilon >= diff, сходимость достигнута
+    jae .converged1
 
     ; Подготовка к следующей итерации
-    inc qword [idx1]
-    mov rax, [sign1]
-    neg rax
-    mov [sign1], rax         ; меняем знак
+    inc qword [k]
+    mov rax, [sign]
+    neg rax                  ; меняем знак
+    mov [sign], rax
 
     ; Защита от бесконечного цикла
     cmp qword [terms_needed], 1000000
     jl .series1_loop
 
+    ; Если достигли максимума итераций, выходим
 .converged1:
     leave
     ret
@@ -153,27 +155,23 @@ compute_pi_series2:
     push rbp
     mov rbp, rsp
 
-    ; Инициализация
-    finit
-    fld qword [const_0]
+    ; Инициализация для каждой новой epsilon
+    fldz
     fstp qword [sum2]        ; sum2 = 0
 
     mov qword [terms_needed], 0
-    mov qword [idx2], 1      ; начинаем с k=1
+    mov qword [n], 1         ; начинаем с k=1
 
 .series2_loop:
+    ; Увеличиваем счетчик членов
     inc qword [terms_needed]
 
     ; Вычисляем 1/k²
-    finit
-
-    ; k²
-    fild qword [idx2]
-    fmul st0, st0            ; k²
-
-    ; 1/k²
+    fild qword [n]           ; k
+    fild qword [n]           ; k (снова)
+    fmulp st1, st0           ; k²
     fld1
-    fdivp st1, st0           ; 1/k²
+    fdivrp st1, st0          ; 1/k²
     fstp qword [term2]
 
     ; Добавляем к сумме
@@ -182,19 +180,15 @@ compute_pi_series2:
     faddp st1, st0
     fstp qword [sum2]
 
-    ; Вычисляем текущее приближение π
-    ; π = √(6 * sum)
+    ; Вычисляем аргумент для sqrt: 6 * sum
     fld qword [sum2]
     fld qword [const_6]
     fmulp st1, st0           ; 6 * sum
+    fstp qword [sqrt_arg]
 
-    fstp qword [pi_approx]   ; сохраняем аргумент для sqrt
+    ; Вызов sqrt
+    movq xmm0, [sqrt_arg]
 
-    ; Вызов sqrt из математической библиотеки
-    ; В x86-64 ABI первым параметром с плавающей точкой передается в xmm0
-    movq xmm0, [pi_approx]   ; помещаем аргумент в xmm0
-
-    ; Сохраняем регистры, которые может испортить sqrt
     push rbx
     push rcx
     push rdx
@@ -205,15 +199,16 @@ compute_pi_series2:
     push r10
     push r11
 
-    ; Выравниваем стек для вызова функции
+    ; Выравниваем стек для вызова C функции
     mov rax, rsp
     and rsp, -16
-    sub rsp, 32              ; теневое пространство
+    sub rsp, 32
 
     call sqrt
 
-    ; Восстанавливаем стек и регистры
+    ; Восстанавливаем стек
     mov rsp, rax
+
     pop r11
     pop r10
     pop r9
@@ -224,27 +219,27 @@ compute_pi_series2:
     pop rcx
     pop rbx
 
-    ; Результат sqrt возвращается в xmm0
-    movq [pi_approx], xmm0   ; сохраняем результат
+    ; Сохраняем результат sqrt
+    movq [pi_approx], xmm0
 
-    ; Проверяем точность
-    fld qword [target_pi]
-    fld qword [pi_approx]
+    ; Проверяем точность: |target_pi - pi_approx| <= epsilon
+    fld qword [target_pi]    ; target_pi
+    fld qword [pi_approx]    ; pi_approx
     fsubp st1, st0           ; target - approx
     fabs                     ; |target - approx|
     fstp qword [diff]
 
-    finit
+    ; Сравниваем diff с epsilon
     fld qword [diff]
     fld qword [epsilon]
+    fcomip st0, st1          ; st0 = epsilon, st1 = diff
+    fstp st0                 ; очищаем стек
 
-    fcomip st1
-    fstp st0
-
-    jbe .converged2          ; если diff <= epsilon
+    ; Если epsilon >= diff
+    jae .converged2
 
     ; Следующий член ряда
-    inc qword [idx2]
+    inc qword [n]
 
     ; Защита от бесконечного цикла
     cmp qword [terms_needed], 1000000
@@ -276,7 +271,7 @@ _start:
     ; Тестируем ряд 1 с разными погрешностями
     mov rbx, 0
 .series1_table:
-    cmp rbx, [eps_count]
+    cmp rbx, [eps_count]  ; Проверяем, не прошли ли все 6 значений
     jge .series1_done
 
     ; Устанавливаем текущую погрешность
@@ -288,10 +283,10 @@ _start:
 
     ; Выводим строку таблицы
     mov rdi, table_row
-    movq xmm0, [epsilon]
-    mov rsi, [terms_needed]
-    movq xmm1, [pi_approx]
-    mov rax, 2               ; 2 параметра в XMM регистрах
+    movq xmm0, [epsilon]     ; epsilon в xmm0
+    mov rsi, [terms_needed]  ; количество членов ряда
+    movq xmm1, [pi_approx]   ; приближение π в xmm1
+    mov rax, 2               ; 2 параметра с плавающей точкой в XMM регистрах
     call printf
 
     inc rbx
@@ -299,8 +294,6 @@ _start:
 
 .series1_done:
     ; Пустая строка между таблицами
-    mov rdi, newline
-    call printf
     mov rdi, newline
     call printf
 
@@ -335,23 +328,16 @@ _start:
 
     ; Выводим строку таблицы
     mov rdi, table_row
-    movq xmm0, [epsilon]
-    mov rsi, [terms_needed]
-    movq xmm1, [pi_approx]
-    mov rax, 2               ; 2 параметра в XMM регистрах
+    movq xmm0, [epsilon]     ; epsilon в xmm0
+    mov rsi, [terms_needed]  ; количество членов ряда
+    movq xmm1, [pi_approx]   ; приближение π в xmm1
+    mov rax, 2               ; 2 параметра с плавающей точкой в XMM регистрах
     call printf
 
     inc rbx
     jmp .series2_table
 
 .series2_done:
-    ; Вывод точного значения π для сравнения
-    mov rdi, newline
-    call printf
-
-    mov rdi, separator
-    call printf
-
     ; Завершение программы
     mov rax, 60
     xor rdi, rdi
